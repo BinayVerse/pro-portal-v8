@@ -63,14 +63,26 @@
           <label for="password" class="block text-sm font-medium text-gray-300 mb-2">
             Password
           </label>
-          <input
-            id="password"
-            v-model="signupForm.password"
-            type="password"
-            required
-            class="input-field w-full"
-            placeholder="Create a strong password"
-          />
+          <div class="relative">
+            <input
+              id="password"
+              v-model="signupForm.password"
+              :type="showPassword ? 'text' : 'password'"
+              required
+              class="input-field w-full pr-12"
+              placeholder="Create a strong password"
+            />
+            <button
+              type="button"
+              class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-300 transition-colors"
+              @click="togglePasswordVisibility"
+            >
+              <UIcon
+                :name="showPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                class="h-5 w-5"
+              />
+            </button>
+          </div>
         </div>
 
         <div>
@@ -152,6 +164,13 @@ const signupForm = ref({
   company: '',
   agreeToTerms: false,
 })
+
+// Password visibility toggle
+const showPassword = ref(false)
+
+const togglePasswordVisibility = () => {
+  showPassword.value = !showPassword.value
+}
 
 const handleSignup = async () => {
   if (!signupForm.value.agreeToTerms) {

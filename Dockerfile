@@ -23,11 +23,11 @@ COPY --from=builder /app/package*.json ./
 # Install only production deps
 RUN npm install --omit=dev --legacy-peer-deps
 
-ENV NUXT_PUBLIC_APP_URL=http://localhost:3000
+ENV NUXT_PUBLIC_APP_URL=http://localhost:3001
 ENV HOST=0.0.0.0
-ENV PORT=3000
+ENV PORT=3001
 
-EXPOSE 3000
+EXPOSE 3001
 
 # Nuxt 3 correct entrypoint
 CMD ["node", ".output/server/index.mjs"]

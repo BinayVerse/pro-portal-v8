@@ -351,6 +351,7 @@
 // Using admin layout
 definePageMeta({
   layout: 'admin',
+  middleware: 'auth',
 })
 
 // Reactive data

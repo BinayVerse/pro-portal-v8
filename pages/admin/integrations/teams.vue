@@ -208,6 +208,7 @@
 <script setup lang="ts">
 definePageMeta({
   layout: 'admin',
+  middleware: 'auth',
 })
 import { ref } from 'vue'
 import { useNotification } from '@/composables/useNotification'

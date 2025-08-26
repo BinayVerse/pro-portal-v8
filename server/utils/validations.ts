@@ -22,3 +22,36 @@ export const ContactUsValidation = z.object({
 })
 
 export type ContactUsData = z.infer<typeof ContactUsValidation>
+
+// Password validation regex
+export const getPasswordRegex = () => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+
+// Signin validation schema
+export const SigninValidation = z.object({
+  email: z.string().email('Invalid email format').max(255, 'Email too long'),
+  password: z.string().min(1, 'Password is required')
+})
+
+// Signup validation schema
+export const SignupValidation = z.object({
+  name: z.string().min(1, 'Name is required').max(255, 'Name too long'),
+  email: z.string().email('Invalid email format').max(255, 'Email too long'),
+  password: z.string().min(8, 'Password must be at least 8 characters').refine(
+    (val) => getPasswordRegex().test(val),
+    'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+  ),
+  contactNumber: z.string().max(20, 'Phone number too long').optional(),
+  organizationName: z.string().min(1, 'Organization name is required').max(255, 'Organization name too long')
+})
+
+// Google signup validation schema
+export const GoogleSignupValidation = z.object({
+  name: z.string().min(1, 'Name is required').max(255, 'Name too long'),
+  email: z.string().email('Invalid email format').max(255, 'Email too long'),
+  contactNumber: z.string().max(20, 'Phone number too long').optional(),
+  organizationName: z.string().min(1, 'Organization name is required').max(255, 'Organization name too long')
+})
+
+export type SigninData = z.infer<typeof SigninValidation>
+export type SignupData = z.infer<typeof SignupValidation>
+export type GoogleSignupData = z.infer<typeof GoogleSignupValidation>

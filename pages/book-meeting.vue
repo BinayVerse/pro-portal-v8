@@ -15,6 +15,13 @@ const showSuccessModal = ref(false)
 // Form reference for manual validation
 const formRef = ref()
 
+// Phone validation handled by component
+
+// Form reference to access UForm's internal state
+const form = ref()
+
+// UForm now handles error styling natively, no custom logic needed
+
 // Zod schema for form validation
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required').max(50, 'First name too long'),
@@ -38,6 +45,7 @@ const schema = z.object({
       },
     ),
   message: z.string().max(1000, 'Message too long').optional(),
+  // phone validation handled at component level
 })
 
 type Schema = z.output<typeof schema>
@@ -84,6 +92,8 @@ const demoExpectations = [
   'Next steps and trial setup',
 ]
 
+// UForm handles error clearing natively when user types
+
 // Function to validate phone and update UI
 function validatePhoneField() {
   const phoneValidation = phoneRef.value?.handlePhoneValidation?.(true)
@@ -101,16 +111,19 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     const isProd = domain.includes('provento.ai') && !domain.includes('test')
     const isTest = domain.includes('test') || domain.includes('refactor')
 
-    // Ensure we have the phone number with country code
-    const phoneNumber = state.phone || ''
-    console.log('Submitting phone number:', phoneNumber)
+    // Get the phone number with country code from the phone component
+    const phoneData = phoneRef.value?.phoneData
+    // Use the raw number format (e.g., "+917008081842") without additional formatting
+    const phoneNumberWithCountryCode = phoneData?.number || state.phone || ''
+    console.log('Submitting phone number with country code:', phoneNumberWithCountryCode)
+    console.log('Phone data:', phoneData)
 
     // Prepare data for API
     const contactData = {
       name: event.data.firstName,
       lastname: event.data.lastName,
       email: event.data.email,
-      phone: phoneNumber || undefined,
+      phone: phoneNumberWithCountryCode || undefined,
       company: event.data.company || undefined,
       jobTitle: event.data.jobTitle || undefined,
       companySize: event.data.companySize || undefined,
