@@ -1,6 +1,7 @@
 export interface State {
     authUser: Record<string, any> | null;
     loading: boolean;
+    error: string | null;
     resetPasswordResponse: ResetPasswordResponse | null;
     updatePasswordResponse: UpdatePasswordResponse | null;
     currentView: string;

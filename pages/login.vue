@@ -123,14 +123,13 @@
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from '~/stores/auth'
+import { useAuthStore } from '~/stores/auth/index'
 
 definePageMeta({
   layout: 'minimal',
 })
 
 const authStore = useAuthStore()
-const { showNotification } = useNotification()
 
 const loginForm = ref({
   email: '',
@@ -145,6 +144,13 @@ const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
 }
 
+// Clear errors when user starts typing
+watch(loginForm, () => {
+  if (authStore.getError) {
+    authStore.clearError()
+  }
+}, { deep: true })
+
 const handleLogin = async () => {
   try {
     await authStore.signIn({
@@ -152,28 +158,14 @@ const handleLogin = async () => {
       password: loginForm.value.password,
     })
 
-    // Show success notification
-    showNotification('Welcome back! Login successful.', 'success', {
-      title: 'Login Successful',
-    })
-
-    // Redirect to intended page or default to admin dashboard
+    // Success is handled in the store, just redirect
     const route = useRoute()
     const redirectTo = (route.query.redirect as string) || '/admin/dashboard'
     await navigateTo(redirectTo)
   } catch (error: any) {
-    console.error('Login error:', error)
-
-    // Show API error as notification
-    showNotification(error.message || 'Login failed. Please check your credentials.', 'error', {
-      title: 'Login Failed',
-      action: {
-        label: 'Forgot Password?',
-        handler: () => {
-          navigateTo('/forgot-password')
-        },
-      },
-    })
+    // Error is already handled and displayed by the store
+    // No need to show additional notifications here
+    console.error('Login failed:', error?.message)
   }
 }
 </script>

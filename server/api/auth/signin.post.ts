@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     const validation = SigninValidation.safeParse(body);
 
     if (!validation.success) {
-      throw new CustomError('Validation error: ' + validation.error.issues[0].message, 400);
+      throw new CustomError('Please check that your email and password are entered correctly.', 400);
     }
 
     const email = body.email?.trim().toLowerCase();
@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
     );
 
     if (!userResult?.rows?.length) {
-      throw new CustomError('User is not registered, please sign up first.', 404); // changed from 400 to 404
+      throw new CustomError('No account found with this email address. Please sign up first or check your email.', 404);
     }
 
     const adminUsers = userResult.rows.filter(
@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
 
     if (adminUsers.length > 1) {
       throw new CustomError(
-        'User has multiple admin/super admin roles across different organizations. Please contact support.',
+        'Multiple admin roles detected for your account. Please contact support to resolve this issue.',
         403
       );
     }
@@ -44,12 +44,12 @@ export default defineEventHandler(async (event) => {
     const user = adminUsers[0];
 
     if (!user) {
-      throw new CustomError('User login is not allowed, please contact admin.', 403);
+      throw new CustomError('Your account access has been restricted. Please contact your administrator for assistance.', 403);
     }
 
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
-      throw new CustomError('Invalid Request: Wrong password', 403);
+      throw new CustomError('The password you entered is incorrect. Please try again or reset your password.', 403);
     }
 
     const token = jwt.sign(
@@ -76,9 +76,17 @@ export default defineEventHandler(async (event) => {
     console.error('Sign-in Handler Error:', error);
 
     if (error instanceof CustomError) {
-      throw error;
+      setResponseStatus(event, error.statusCode);
+      return {
+        status: 'error',
+        message: error.message,
+      };
     }
 
-    throw new CustomError('Internal Server Error', 500);
+    setResponseStatus(event, 500);
+    return {
+      status: 'error',
+      message: 'We\'re experiencing technical difficulties. Please try again in a few moments.',
+    };
   }
 });
