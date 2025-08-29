@@ -40,11 +40,11 @@
           </UButton>
 
           <UButton
-            to="/admin/documents"
+            to="/admin/artefacts"
             variant="ghost"
             justify="start"
             icon="heroicons:document-text"
-            :color="$route.name === 'admin-documents' ? 'primary' : 'gray'"
+            :color="$route.name === 'admin-artefacts' ? 'primary' : 'gray'"
             class="w-full"
           >
             Artefacts
@@ -86,6 +86,7 @@
                 variant="ghost"
                 justify="start"
                 size="sm"
+                icon="heroicons:eye"
                 :color="$route.name === 'admin-integrations' ? 'primary' : 'gray'"
                 class="w-full"
               >
@@ -144,9 +145,9 @@
     <!-- Main content area -->
     <div class="flex-1 flex flex-col">
       <!-- Top header -->
-      <header class="bg-dark-900 border-b border-dark-700 px-6 py-4">
-        <div class="flex items-center justify-between">
-          <h1 class="text-xl font-semibold text-white">{{ pageTitle }}</h1>
+      <header class="bg-dark-900 border-b border-dark-700 px-6 py-2.5">
+        <div class="flex items-center justify-end">
+          <!-- <h1 class="text-xl font-semibold text-white">{{ pageTitle }}</h1> -->
 
           <!-- Profile dropdown -->
           <UDropdown :items="profileItems" :popper="{ placement: 'bottom-end' }">
@@ -198,7 +199,7 @@ const pageTitle = computed(() => {
   const titles: Record<string, string> = {
     'admin-dashboard': 'Dashboard',
     'admin-users': 'Users',
-    'admin-documents': 'Documents',
+    'admin-artefacts': 'Artefacts',
     'admin-analytics': 'Analytics',
     'admin-integrations': 'Integrations Overview',
     'admin-integrations-teams': 'Teams Integration',

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useAuthStore } from '~/stores/auth'
+import { useAuthStore } from '~/stores/auth/index'
 
 const authStore = useAuthStore()
 const config = useRuntimeConfig()
@@ -21,7 +21,8 @@ const handleGoogleResponse = async (response: GoogleResponse) => {
 
       if (result.status === 'success') {
         showNotification(result.message || 'Sign-in successful!', 'success')
-        window.location.href = result.redirect
+        // Use store redirect logic to respect route.query.redirect
+        await authStore.handlePostLoginRedirect()
       } else {
         showNotification(result.message || 'Sign-in failed.', 'error')
       }
@@ -68,11 +69,17 @@ const initGoogleSignIn = async () => {
 }
 
 const handleCustomGoogleSignIn = () => {
-  showNotification('Google Sign-In is not ready. Please refresh the page and try again.', 'error')
+  showNotification(
+    `Google ${props.authView === 'signin' ? 'Sign-In' : 'Sign-Up'} is not ready. Please refresh the page and try again.`,
+    'error',
+  )
   return
   if (!(window as any).google) {
     console.error('Google API not ready yet.')
-    showNotification('Google Sign-In is not ready. Please refresh the page and try again.', 'error')
+    showNotification(
+      `Google ${props.authView === 'signin' ? 'Sign-In' : 'Sign-Up'} is not ready. Please refresh the page and try again.`,
+      'error',
+    )
     return
   }
 

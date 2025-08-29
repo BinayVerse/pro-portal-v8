@@ -33,8 +33,10 @@ export default defineEventHandler(async (event) => {
       );
     }
 
-    const { error } = SignupValidation.validate(params);
-    if (error) throw new CustomError('Validation error: ' + error.details[0].message, 400);
+    const validation = SignupValidation.safeParse(params);
+    if (!validation.success) {
+      throw new CustomError('Validation error: ' + validation.error.errors[0].message, 400);
+    }
 
     if (params.name.length < 3) throw new CustomError('Name must be at least 3 characters long', 400);
     if (params.companyName.length < 3) throw new CustomError('Company name must be at least 3 characters long', 400);

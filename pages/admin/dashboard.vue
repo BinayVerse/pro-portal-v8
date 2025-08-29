@@ -227,6 +227,8 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime } from '~/utils'
+
 definePageMeta({
   layout: 'admin',
   middleware: 'auth',
@@ -376,18 +378,7 @@ const formatFileSize = (bytes: number) => {
 }
 
 const formatTime = (date: Date) => {
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const days = Math.floor(hours / 24)
-
-  if (days > 0) {
-    return `${days} day${days > 1 ? 's' : ''} ago`
-  } else if (hours > 0) {
-    return `${hours} hour${hours > 1 ? 's' : ''} ago`
-  } else {
-    return 'Just now'
-  }
+  return formatDateTime(date)
 }
 
 // Computed properties for sorted data

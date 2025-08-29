@@ -137,6 +137,8 @@
 </template>
 
 <script setup lang="ts">
+import { formatDateTime } from '~/utils'
+
 // Using admin layout
 definePageMeta({
   layout: 'admin',
@@ -191,25 +193,25 @@ const recentActivity = ref([
     id: 1,
     type: 'success',
     message: 'Slack integration synced',
-    time: '2 minutes ago',
+    time: formatDateTime(new Date(Date.now() - 2 * 60 * 1000)), // 2 minutes ago
   },
   {
     id: 2,
     type: 'success',
     message: 'Teams integration synced',
-    time: '5 minutes ago',
+    time: formatDateTime(new Date(Date.now() - 5 * 60 * 1000)), // 5 minutes ago
   },
   {
     id: 3,
     type: 'info',
     message: 'New user joined Slack workspace',
-    time: '1 hour ago',
+    time: formatDateTime(new Date(Date.now() - 60 * 60 * 1000)), // 1 hour ago
   },
   {
     id: 4,
     type: 'warning',
     message: 'WhatsApp setup required',
-    time: '1 day ago',
+    time: formatDateTime(new Date(Date.now() - 24 * 60 * 60 * 1000)), // 1 day ago
   },
 ])
 

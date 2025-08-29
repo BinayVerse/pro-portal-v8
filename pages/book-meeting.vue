@@ -76,9 +76,9 @@ const companySizeOptions = [
 ]
 
 const useCaseOptions = [
-  { value: 'legal', label: 'Legal document analysis' },
+  { value: 'legal', label: 'Legal artefact analysis' },
   { value: 'hr', label: 'HR documentation' },
-  { value: 'finance', label: 'Financial documents' },
+  { value: 'finance', label: 'Financial artefacts' },
   { value: 'research', label: 'Research and analysis' },
   { value: 'customer-support', label: 'Customer support' },
   { value: 'other', label: 'Other' },
@@ -86,7 +86,7 @@ const useCaseOptions = [
 
 const demoExpectations = [
   'Personalized demo based on your use case',
-  'Live document upload and questioning',
+  'Live artefact upload and questioning',
   'Integration walkthrough',
   'Pricing and plan discussion',
   'Next steps and trial setup',
@@ -220,7 +220,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             <span class="text-primary-400">Demo</span>
           </h1>
           <p class="text-xl text-gray-300">
-            See Provento.ai in action and discover how it can transform your document workflow
+            See Provento.ai in action and discover how it can transform your artefact workflow
           </p>
         </div>
 

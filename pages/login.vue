@@ -130,6 +130,7 @@ definePageMeta({
 })
 
 const authStore = useAuthStore()
+const { showNotification } = useNotification()
 
 const loginForm = ref({
   email: '',
@@ -145,11 +146,15 @@ const togglePasswordVisibility = () => {
 }
 
 // Clear errors when user starts typing
-watch(loginForm, () => {
-  if (authStore.getError) {
-    authStore.clearError()
-  }
-}, { deep: true })
+watch(
+  loginForm,
+  () => {
+    if (authStore.error) {
+      authStore.setError(null)
+    }
+  },
+  { deep: true },
+)
 
 const handleLogin = async () => {
   try {
@@ -158,13 +163,14 @@ const handleLogin = async () => {
       password: loginForm.value.password,
     })
 
-    // Success is handled in the store, just redirect
-    const route = useRoute()
-    const redirectTo = (route.query.redirect as string) || '/admin/dashboard'
-    await navigateTo(redirectTo)
+    // Show success notification
+    showNotification('Welcome back! Login successful.', 'success')
+
+    // Handle redirect through store
+    await authStore.handlePostLoginRedirect()
   } catch (error: any) {
-    // Error is already handled and displayed by the store
-    // No need to show additional notifications here
+    // Show error notification
+    showNotification(error?.message || 'Login failed. Please try again.', 'error')
     console.error('Login failed:', error?.message)
   }
 }

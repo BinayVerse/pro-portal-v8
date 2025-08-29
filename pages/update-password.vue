@@ -63,9 +63,108 @@
               />
             </button>
           </div>
-          <p class="mt-1 text-xs text-gray-400">
-            Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character.
-          </p>
+          <!-- Password Validation Indicators -->
+          <div v-if="updateForm.password" class="mt-3 space-y-2">
+            <div class="text-xs font-medium text-gray-300 mb-2">Password Requirements:</div>
+
+            <div class="space-y-1">
+              <!-- Length requirement -->
+              <div class="flex items-center space-x-2">
+                <UIcon
+                  :name="passwordValidation.hasMinLength ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                  :class="passwordValidation.hasMinLength ? 'text-green-400' : 'text-red-400'"
+                  class="w-4 h-4"
+                />
+                <span
+                  :class="passwordValidation.hasMinLength ? 'text-green-400' : 'text-gray-400'"
+                  class="text-xs"
+                >
+                  At least 8 characters
+                </span>
+              </div>
+
+              <!-- Uppercase requirement -->
+              <div class="flex items-center space-x-2">
+                <UIcon
+                  :name="passwordValidation.hasUppercase ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                  :class="passwordValidation.hasUppercase ? 'text-green-400' : 'text-red-400'"
+                  class="w-4 h-4"
+                />
+                <span
+                  :class="passwordValidation.hasUppercase ? 'text-green-400' : 'text-gray-400'"
+                  class="text-xs"
+                >
+                  One uppercase letter
+                </span>
+              </div>
+
+              <!-- Lowercase requirement -->
+              <div class="flex items-center space-x-2">
+                <UIcon
+                  :name="passwordValidation.hasLowercase ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                  :class="passwordValidation.hasLowercase ? 'text-green-400' : 'text-red-400'"
+                  class="w-4 h-4"
+                />
+                <span
+                  :class="passwordValidation.hasLowercase ? 'text-green-400' : 'text-gray-400'"
+                  class="text-xs"
+                >
+                  One lowercase letter
+                </span>
+              </div>
+
+              <!-- Number requirement -->
+              <div class="flex items-center space-x-2">
+                <UIcon
+                  :name="passwordValidation.hasNumber ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                  :class="passwordValidation.hasNumber ? 'text-green-400' : 'text-red-400'"
+                  class="w-4 h-4"
+                />
+                <span
+                  :class="passwordValidation.hasNumber ? 'text-green-400' : 'text-gray-400'"
+                  class="text-xs"
+                >
+                  One number
+                </span>
+              </div>
+
+              <!-- Special character requirement -->
+              <div class="flex items-center space-x-2">
+                <UIcon
+                  :name="passwordValidation.hasSpecialChar ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                  :class="passwordValidation.hasSpecialChar ? 'text-green-400' : 'text-red-400'"
+                  class="w-4 h-4"
+                />
+                <span
+                  :class="passwordValidation.hasSpecialChar ? 'text-green-400' : 'text-gray-400'"
+                  class="text-xs"
+                >
+                  One special character (@$!%*?&)
+                </span>
+              </div>
+            </div>
+
+            <!-- Overall strength indicator -->
+            <div class="mt-3 pt-2 border-t border-gray-600">
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-medium text-gray-300">Strength:</span>
+                <div class="flex space-x-1">
+                  <div
+                    v-for="i in 5"
+                    :key="i"
+                    class="w-6 h-1 rounded-full"
+                    :class="i <= passwordStrength ? getStrengthColor(passwordStrength) : 'bg-gray-600'"
+                  ></div>
+                </div>
+                <span
+                  class="text-xs font-medium"
+                  :class="getStrengthTextColor(passwordStrength)"
+                >
+                  {{ getStrengthText(passwordStrength) }}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -93,73 +192,25 @@
               />
             </button>
           </div>
-        </div>
 
-        <!-- Password validation indicators -->
-        <div v-if="updateForm.password" class="space-y-2">
-          <div class="text-xs">
+          <!-- Password Match Indicator -->
+          <div v-if="updateForm.confirmPassword" class="mt-2">
             <div class="flex items-center space-x-2">
-              <UIcon 
-                :name="validations.length ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'" 
-                :class="validations.length ? 'text-green-400' : 'text-red-400'"
-                class="h-3 w-3"
+              <UIcon
+                :name="passwordsMatch ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'"
+                :class="passwordsMatch ? 'text-green-400' : 'text-red-400'"
+                class="w-4 h-4"
               />
-              <span :class="validations.length ? 'text-green-400' : 'text-red-400'">
-                At least 8 characters
-              </span>
-            </div>
-            <div class="flex items-center space-x-2">
-              <UIcon 
-                :name="validations.uppercase ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'" 
-                :class="validations.uppercase ? 'text-green-400' : 'text-red-400'"
-                class="h-3 w-3"
-              />
-              <span :class="validations.uppercase ? 'text-green-400' : 'text-red-400'">
-                One uppercase letter
-              </span>
-            </div>
-            <div class="flex items-center space-x-2">
-              <UIcon 
-                :name="validations.lowercase ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'" 
-                :class="validations.lowercase ? 'text-green-400' : 'text-red-400'"
-                class="h-3 w-3"
-              />
-              <span :class="validations.lowercase ? 'text-green-400' : 'text-red-400'">
-                One lowercase letter
-              </span>
-            </div>
-            <div class="flex items-center space-x-2">
-              <UIcon 
-                :name="validations.number ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'" 
-                :class="validations.number ? 'text-green-400' : 'text-red-400'"
-                class="h-3 w-3"
-              />
-              <span :class="validations.number ? 'text-green-400' : 'text-red-400'">
-                One number
-              </span>
-            </div>
-            <div class="flex items-center space-x-2">
-              <UIcon 
-                :name="validations.special ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'" 
-                :class="validations.special ? 'text-green-400' : 'text-red-400'"
-                class="h-3 w-3"
-              />
-              <span :class="validations.special ? 'text-green-400' : 'text-red-400'">
-                One special character
-              </span>
-            </div>
-            <div class="flex items-center space-x-2">
-              <UIcon 
-                :name="validations.match ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'" 
-                :class="validations.match ? 'text-green-400' : 'text-red-400'"
-                class="h-3 w-3"
-              />
-              <span :class="validations.match ? 'text-green-400' : 'text-red-400'">
+              <span
+                :class="passwordsMatch ? 'text-green-400' : 'text-red-400'"
+                class="text-xs"
+              >
                 Passwords match
               </span>
             </div>
           </div>
         </div>
+
 
         <button
           type="submit"
@@ -213,7 +264,7 @@
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from '~/stores/auth'
+import { useAuthStore } from '~/stores/auth/index'
 
 definePageMeta({
   layout: 'minimal',
@@ -243,22 +294,68 @@ const toggleConfirmPasswordVisibility = () => {
   showConfirmPassword.value = !showConfirmPassword.value
 }
 
-// Password validation
-const validations = computed(() => {
+// Password validation reactive state
+const passwordValidation = computed(() => {
   const password = updateForm.value.password
   return {
-    length: password.length >= 8,
-    uppercase: /[A-Z]/.test(password),
-    lowercase: /[a-z]/.test(password),
-    number: /\d/.test(password),
-    special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
-    match: password === updateForm.value.confirmPassword && password.length > 0,
+    hasMinLength: password.length >= 8,
+    hasUppercase: /[A-Z]/.test(password),
+    hasLowercase: /[a-z]/.test(password),
+    hasNumber: /\d/.test(password),
+    hasSpecialChar: /[@$!%*?&]/.test(password)
   }
 })
 
-const isFormValid = computed(() => {
-  return Object.values(validations.value).every(Boolean)
+// Password strength calculation
+const passwordStrength = computed(() => {
+  const validations = passwordValidation.value
+  const checks = [
+    validations.hasMinLength,
+    validations.hasUppercase,
+    validations.hasLowercase,
+    validations.hasNumber,
+    validations.hasSpecialChar
+  ]
+  return checks.filter(Boolean).length
 })
+
+// Password match validation
+const passwordsMatch = computed(() => {
+  return updateForm.value.password === updateForm.value.confirmPassword &&
+         updateForm.value.password.length > 0 &&
+         updateForm.value.confirmPassword.length > 0
+})
+
+// Form validation
+const isFormValid = computed(() => {
+  const passwordChecks = Object.values(passwordValidation.value).every(Boolean)
+  return passwordChecks && passwordsMatch.value
+})
+
+// Helper functions for strength display
+const getStrengthColor = (strength: number) => {
+  if (strength <= 1) return 'bg-red-500'
+  if (strength <= 2) return 'bg-orange-500'
+  if (strength <= 3) return 'bg-yellow-500'
+  if (strength <= 4) return 'bg-blue-500'
+  return 'bg-green-500'
+}
+
+const getStrengthTextColor = (strength: number) => {
+  if (strength <= 1) return 'text-red-400'
+  if (strength <= 2) return 'text-orange-400'
+  if (strength <= 3) return 'text-yellow-400'
+  if (strength <= 4) return 'text-blue-400'
+  return 'text-green-400'
+}
+
+const getStrengthText = (strength: number) => {
+  if (strength <= 1) return 'Very Weak'
+  if (strength <= 2) return 'Weak'
+  if (strength <= 3) return 'Fair'
+  if (strength <= 4) return 'Good'
+  return 'Strong'
+}
 
 const handleUpdatePassword = async () => {
   const token = route.query.token as string

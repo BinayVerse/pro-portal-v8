@@ -64,11 +64,17 @@ export const useNotification = () => {
     return showNotification(message, 'info', options)
   }
 
+  // Add clear function to remove all toasts
+  const clear = () => {
+    toast.clear()
+  }
+
   return {
     showNotification,
     showSuccess,
     showError,
     showWarning,
     showInfo,
+    clear,
   }
 }
