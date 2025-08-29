@@ -94,16 +94,15 @@
 
         <!-- Category Filter -->
         <div class="lg:w-48">
-          <select
+          <USelect
             v-model="selectedCategory"
-            class="block w-full px-3 py-3 border border-dark-700 rounded-lg bg-dark-900 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-          >
-            <option value="">All Categories</option>
-            <option value="HR Policy">HR Policy</option>
-            <option value="Financial">Financial</option>
-            <option value="Technical">Technical</option>
-            <option value="Analytics">Analytics</option>
-          </select>
+            :options="[
+              { label: 'All Categories', value: '' },
+              ...availableCategories.map(cat => ({ label: cat, value: cat }))
+            ]"
+            placeholder="All Categories"
+            size="lg"
+          />
         </div>
 
         <!-- Type Filter -->
@@ -260,17 +259,14 @@
     <UModal
       v-model="showUploadModal"
       prevent-close
-      class="custom-modal"
-      :ui="{ width: isViewMode ? '' : 'custom-width' }"
-      :fullscreen="isViewMode"
+      :ui="{ width: 'sm:max-w-4xl' }"
       :disabled="disabledControl"
       :class="{ 'disabled-modal': disabledControl }"
     >
       <div class="p-8">
         <div class="flex items-center justify-between mb-6 pb-4 border-b border-dark-600">
           <div>
-            <h3 class="text-xl font-semibold text-white">Upload New Artefact</h3>
-            <p class="text-sm text-gray-400 mt-1">Add files to your artefact collection for AI processing</p>
+            <h3 class="text-xl font-semibold text-white">Please choose an upload method:</h3>
           </div>
           <UButton
             @click="showUploadModal = false"
@@ -283,112 +279,332 @@
           />
         </div>
 
-        <UForm :schema="schema" :state="state" @submit="onSubmit" class="space-y-6">
-          <!-- Drag and Drop File Upload -->
-          <UFormGroup label="File" name="file" required>
-            <div
-              @drop.prevent="handleDrop"
-              @dragover.prevent="handleDragOver"
-              @dragenter.prevent="handleDragEnter"
-              @dragleave.prevent="handleDragLeave"
-              class="border-2 border-dashed border-dark-600 rounded-lg p-8 text-center transition-colors relative"
-              :class="{
-                'border-blue-500 bg-blue-500/10': isDragOver,
-                'border-green-500 bg-green-500/10': state.file,
-                'hover:border-dark-500': !isDragOver && !state.file
-              }"
-            >
-              <div v-if="!state.file" class="py-4">
-                <UIcon name="heroicons:cloud-arrow-up" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p class="text-lg text-gray-300 mb-2">
-                  <span class="font-medium">Click to upload</span> or drag and drop
-                </p>
-                <p class="text-sm text-gray-400 mb-4">
-                  PDF, Word, TXT, CSV, Markdown, Images
-                </p>
-                <p class="text-xs text-gray-500">
-                  Maximum file size: 10MB
-                </p>
-                <input
-                  ref="fileInput"
-                  type="file"
-                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  accept=".pdf,.doc,.docx,.txt,.csv,.md,.png,.jpg,.jpeg"
-                  @change="handleFileSelect"
-                />
-              </div>
-              <div v-else class="flex items-center justify-between py-4">
-                <div class="flex items-center space-x-4">
-                  <UIcon name="heroicons:document" class="w-10 h-10 text-green-400" />
-                  <div class="text-left">
-                    <p class="text-white font-medium truncate max-w-md">{{ state.file.name }}</p>
-                    <p class="text-sm text-gray-400">{{ formatFileSize(state.file.size) }} • {{ getFileType(state.file.name) }}</p>
+        <!-- Upload Method Tabs -->
+        <div class="mb-6">
+          <UTabs v-model="uploadType" :items="tabItems">
+
+            <template #file>
+              <UForm :schema="schema" :state="state" @submit="onSubmit" class="space-y-6">
+                <!-- File Category - First Position -->
+                <UFormGroup label="File Category" name="category" required>
+                  <UInputMenu
+                    v-model="state.category"
+                    :options="categoryOptions"
+                    placeholder="Select a Category or Add a new one"
+                    :loading="isUploading"
+                    searchable
+                    :disabled="isUploading"
+                    value-attribute="label"
+                    :uiMenu="{
+                      option: {
+                        container: 'flex items-center w-full',
+                      },
+                    }"
+                  >
+                    <template #option="{ option: category }">
+                      <div class="relative flex items-center w-full p-2 pr-0">
+                        <span class="truncate">{{ category.label }}</span>
+
+                        <!-- Fully interactive button wrapper -->
+                        <div
+                          class="absolute right-2"
+                          style="pointer-events: auto"
+                          @mousedown.stop.prevent
+                        >
+                          <UButton
+                            v-if="state.category !== category.label"
+                            @click="deleteCategory(category.value)"
+                            :ui="{ rounded: 'rounded-full' }"
+                            icon="i-heroicons:trash"
+                            variant="outline"
+                            color="red"
+                            size="xs"
+                            :loading="isUploading"
+                            :disabled="isUploading"
+                          />
+                        </div>
+                      </div>
+                    </template>
+                    <template #option-empty="{ query }">
+                      <div class="flex items-center justify-between w-full p-2">
+                        <span class="text-gray-500">
+                          <q>{{ query }}</q> category not found! Want to add?
+                        </span>
+                        <UButton
+                          @click="addCategory(query)"
+                          color="primary"
+                          size="xs"
+                          :loading="isUploading"
+                          :disabled="isUploading"
+                        >
+                          Add
+                        </UButton>
+                      </div>
+                    </template>
+                    <template #empty>
+                      No categories found
+                    </template>
+                  </UInputMenu>
+                </UFormGroup>
+
+                <!-- Drag and Drop File Upload -->
+                <UFormGroup label="File" name="file" required>
+                  <div
+                    @drop.prevent="handleDrop"
+                    @dragover.prevent="handleDragOver"
+                    @dragenter.prevent="handleDragEnter"
+                    @dragleave.prevent="handleDragLeave"
+                    class="border-2 border-dashed border-dark-600 rounded-lg p-8 text-center transition-colors relative"
+                    :class="{
+                      'border-blue-500 bg-blue-500/10': isDragOver,
+                      'border-green-500 bg-green-500/10': state.file,
+                      'hover:border-dark-500': !isDragOver && !state.file
+                    }"
+                  >
+                    <div v-if="!state.file" class="py-4">
+                      <UIcon name="heroicons:cloud-arrow-up" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <p class="text-lg text-gray-300 mb-2">
+                        <span class="font-medium">Click to upload</span> or drag and drop
+                      </p>
+                      <p class="text-sm text-gray-400 mb-4">
+                        PDF, Word, TXT, CSV, Markdown, Images
+                      </p>
+                      <p class="text-xs text-gray-500">
+                        Maximum file size: 20MB
+                      </p>
+                      <input
+                        ref="fileInput"
+                        type="file"
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        accept=".pdf,.doc,.docx,.txt,.csv,.md,.png,.jpg,.jpeg"
+                        @change="handleFileSelect"
+                      />
+                    </div>
+                    <div v-else class="flex items-center justify-between py-4">
+                      <div class="flex items-center space-x-4">
+                        <UIcon name="heroicons:document" class="w-10 h-10 text-green-400" />
+                        <div class="text-left">
+                          <p class="text-white font-medium truncate max-w-md">{{ state.file.name }}</p>
+                          <p class="text-sm text-gray-400">{{ formatFileSize(state.file.size) }} • {{ getFileType(state.file.name) }}</p>
+                        </div>
+                      </div>
+                      <UButton
+                        @click="removeFile"
+                        variant="ghost"
+                        icon="heroicons:x-mark"
+                        color="red"
+                        size="md"
+                      />
+                    </div>
                   </div>
+                </UFormGroup>
+
+                <!-- Description -->
+                <UFormGroup label="Description (Optional)" name="description">
+                  <UTextarea
+                    v-model="state.description"
+                    placeholder="Brief description (max 100 characters)"
+                    :maxlength="100"
+                    :rows="3"
+                    size="lg"
+                  />
+                  <p class="text-xs text-gray-400 mt-1">
+                    {{ state.description?.length || 0 }}/100 characters
+                  </p>
+                </UFormGroup>
+
+                <div class="flex justify-end space-x-3 pt-6 border-t border-dark-600 mt-6">
+                  <UButton
+                    @click="showUploadModal = false"
+                    :disabled="isUploading"
+                    variant="outline"
+                    color="gray"
+                    size="lg"
+                    class="min-w-[120px]"
+                  >
+                    Cancel
+                  </UButton>
+                  <UButton
+                    type="submit"
+                    :loading="isUploading"
+                    :disabled="isUploading"
+                    color="primary"
+                    size="lg"
+                    class="min-w-[120px]"
+                    icon="heroicons:cloud-arrow-up"
+                  >
+                    {{ isUploading ? 'Uploading...' : 'Upload' }}
+                  </UButton>
                 </div>
-                <UButton
-                  @click="removeFile"
-                  variant="ghost"
-                  icon="heroicons:x-mark"
-                  color="red"
-                  size="md"
-                />
-              </div>
+              </UForm>
+            </template>
+
+            <template #google>
+              <div class="space-y-6">
+                <!-- File Category - First Position -->
+                <UFormGroup label="File Category" required>
+                  <UInputMenu
+                    v-model="googleDriveState.category"
+                    :options="categoryOptions"
+                    placeholder="Select a Category or Add a new one"
+                    :loading="isUploadingFromGoogleDrive"
+                    searchable
+                    :disabled="isUploadingFromGoogleDrive"
+                    value-attribute="label"
+                    :uiMenu="{
+                      option: {
+                        container: 'flex items-center w-full',
+                      },
+                    }"
+                  >
+                    <template #option="{ option: category }">
+                      <div class="relative flex items-center w-full p-2 pr-0">
+                        <span class="truncate">{{ category.label }}</span>
+
+                        <!-- Fully interactive button wrapper -->
+                        <div
+                          class="absolute right-2"
+                          style="pointer-events: auto"
+                          @mousedown.stop.prevent
+                        >
+                          <UButton
+                            v-if="googleDriveState.category !== category.label"
+                            @click="deleteCategory(category.value)"
+                            :ui="{ rounded: 'rounded-full' }"
+                            icon="i-heroicons:trash"
+                            variant="outline"
+                            color="red"
+                            size="xs"
+                            :loading="isUploadingFromGoogleDrive"
+                            :disabled="isUploadingFromGoogleDrive"
+                          />
+                        </div>
+                      </div>
+                    </template>
+                    <template #option-empty="{ query }">
+                      <div class="flex items-center justify-between w-full p-2">
+                        <span class="text-gray-500">
+                          <q>{{ query }}</q> category not found! Want to add?
+                        </span>
+                        <UButton
+                          @click="addCategory(query)"
+                          color="primary"
+                          size="xs"
+                          :loading="isUploadingFromGoogleDrive"
+                          :disabled="isUploadingFromGoogleDrive"
+                        >
+                          Add
+                        </UButton>
+                      </div>
+                    </template>
+                    <template #empty>
+                      No categories found
+                    </template>
+                  </UInputMenu>
+                </UFormGroup>
+
+          <!-- Google Drive URL -->
+          <UFormGroup label="Google drive public URL">
+            <div class="flex space-x-2">
+              <input
+                v-model="googleDriveState.url"
+                type="url"
+                placeholder="Google drive URL eg: https://drive.google.com/drive/folders/1UMPf5gDy_mCW4v"
+                class="flex-1 px-3 py-3 border border-dark-700 rounded-lg bg-dark-900 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              />
+              <UButton
+                @click="fetchGoogleDriveFiles"
+                :loading="isFetchingFiles"
+                color="primary"
+                size="lg"
+                class="min-w-[100px]"
+              >
+                Fetch Files
+              </UButton>
+              <UButton
+                @click="uploadFromGoogleDrive"
+                :disabled="googleDriveFiles.length === 0 || isUploadingFromGoogleDrive"
+                :loading="isUploadingFromGoogleDrive"
+                color="blue"
+                size="lg"
+                class="min-w-[180px]"
+              >
+                Upload from Google Drive
+              </UButton>
             </div>
           </UFormGroup>
 
-          <!-- Category Selection -->
-          <UFormGroup label="Category" name="category" required>
-            <USelect
-              v-model="state.category"
-              :options="[
-                { label: 'HR Policy', value: 'HR Policy' },
-                { label: 'Financial', value: 'Financial' },
-                { label: 'Technical', value: 'Technical' },
-                { label: 'Analytics', value: 'Analytics' }
-              ]"
-              placeholder="Select category"
-              size="lg"
-            />
-          </UFormGroup>
-
-          <!-- Description on separate row -->
-          <UFormGroup label="Description (Optional)" name="description">
-            <UTextarea
-              v-model="state.description"
-              placeholder="Brief description (max 100 characters)"
-              :maxlength="100"
-              :rows="3"
-              size="lg"
-            />
-            <p class="text-xs text-gray-400 mt-1">
-              {{ state.description?.length || 0 }}/100 characters
-            </p>
-          </UFormGroup>
-
-          <div class="flex justify-end space-x-3 pt-6 border-t border-dark-600 mt-6">
-            <UButton
-              @click="showUploadModal = false"
-              :disabled="isUploading"
-              variant="outline"
-              color="gray"
-              size="lg"
-              class="min-w-[120px]"
-            >
-              Cancel
-            </UButton>
-            <UButton
-              type="submit"
-              :loading="isUploading"
-              :disabled="isUploading"
-              color="primary"
-              size="lg"
-              class="min-w-[120px]"
-              icon="heroicons:cloud-arrow-up"
-            >
-              {{ isUploading ? 'Uploading...' : 'Upload Artefact' }}
-            </UButton>
+          <!-- Note -->
+          <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+            <div class="flex items-start space-x-3">
+              <UIcon name="heroicons:information-circle" class="w-5 h-5 text-blue-400 mt-0.5" />
+              <div class="text-sm text-blue-300">
+                <p class="font-medium mb-1">Note:</p>
+                <p>By signing in, you allow us to access your Google Drive and download selected files to our server. Your files are not stored or shared beyond this process.</p>
+                <p class="mt-2">Supported file types: CSV, MS Word, PDF, Markdown, and Text files</p>
+              </div>
+            </div>
           </div>
-        </UForm>
+
+          <!-- Files Table -->
+          <div class="border border-dark-700 rounded-lg overflow-hidden">
+            <div class="bg-dark-900 px-4 py-3 border-b border-dark-700">
+              <div class="grid grid-cols-3 gap-4 text-sm font-medium text-gray-400">
+                <div>Name</div>
+                <div>File Type</div>
+                <div>Size</div>
+              </div>
+            </div>
+
+            <div class="bg-dark-800 min-h-[200px] flex items-center justify-center">
+              <div v-if="googleDriveFiles.length === 0" class="text-center py-8">
+                <UIcon name="heroicons:folder-open" class="w-12 h-12 text-gray-500 mx-auto mb-3" />
+                <p class="text-gray-400 text-sm">No files available for selection.</p>
+              </div>
+              <div v-else class="w-full">
+                <div
+                  v-for="file in googleDriveFiles"
+                  :key="file.id"
+                  class="px-4 py-3 border-b border-dark-700 hover:bg-dark-700/50 transition-colors"
+                >
+                  <div class="grid grid-cols-3 gap-4 text-sm">
+                    <div class="text-white font-medium">{{ file.name }}</div>
+                    <div class="text-gray-400">{{ file.type }}</div>
+                    <div class="text-gray-400">{{ file.size }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+                <!-- Bottom Actions -->
+                <div class="flex justify-end space-x-3 pt-6 border-t border-dark-600 mt-6">
+                  <UButton
+                    @click="showUploadModal = false"
+                    :disabled="isUploadingFromGoogleDrive"
+                    variant="outline"
+                    color="gray"
+                    size="lg"
+                    class="min-w-[120px]"
+                  >
+                    Cancel
+                  </UButton>
+                  <UButton
+                    @click="uploadFromGoogleDrive"
+                    :disabled="googleDriveFiles.length === 0 || isUploadingFromGoogleDrive"
+                    :loading="isUploadingFromGoogleDrive"
+                    color="primary"
+                    size="lg"
+                    class="min-w-[120px]"
+                    icon="heroicons:cloud-arrow-up"
+                  >
+                    {{ isUploadingFromGoogleDrive ? 'Uploading...' : 'Upload' }}
+                  </UButton>
+                </div>
+              </div>
+            </template>
+          </UTabs>
+        </div>
       </div>
     </UModal>
 
@@ -500,6 +716,48 @@ const showSummaryModal = ref(false)
 const selectedArtefact = ref(null)
 const uploadProgress = ref(0)
 const isUploading = ref(false)
+
+// Upload type - default to file upload (0 = file, 1 = google)
+const uploadType = ref(0)
+
+// Tab items for UTabs
+const tabItems = [
+  {
+    value: 0,
+    slot: 'file',
+    label: 'File Upload',
+    icon: 'i-heroicons-document'
+  },
+  {
+    value: 1,
+    slot: 'google',
+    label: 'Google Drive',
+    icon: 'i-logos-google-drive'
+  }
+]
+
+// Categories management
+const availableCategories = ref([
+  'HR Policy',
+  'Financial',
+  'Technical',
+  'Analytics',
+  'Legal & Compliance',
+  'Policies & Procedures',
+  'Product / Service Information',
+  'Technical / Operational Documentation',
+  'Training & Onboarding'
+])
+
+// Google Drive state
+const googleDriveState = reactive({
+  category: '',
+  url: '',
+})
+
+const googleDriveFiles = ref([])
+const isFetchingFiles = ref(false)
+const isUploadingFromGoogleDrive = ref(false)
 
 // Form state for UForm
 const state = reactive({
@@ -628,6 +886,15 @@ const totalCategories = computed(() => {
 })
 const totalSize = computed(() => '7.8 MB') // This would be calculated from actual file sizes
 
+// Category options for USelectMenu
+const categoryOptions = computed(() => {
+  return availableCategories.value.map(category => ({
+    label: category,
+    value: category,
+    deletable: true
+  }))
+})
+
 const filteredArtefacts = computed(() => {
   return artefacts.value.filter((artefact) => {
     const matchesSearch =
@@ -739,9 +1006,9 @@ const handleFileSelect = (event: Event) => {
 }
 
 const setFile = (file: File) => {
-  // Validate file size (10MB limit)
-  if (file.size > 10 * 1024 * 1024) {
-    alert('File size must be less than 10MB')
+  // Validate file size (20MB limit)
+  if (file.size > 20 * 1024 * 1024) {
+    alert('File size must be less than 20MB')
     return
   }
 
@@ -848,6 +1115,175 @@ const onSubmit = async (event: FormSubmitEvent<Schema>) => {
     isUploading.value = false
   }
 }
+
+// Google Drive methods
+const fetchGoogleDriveFiles = async () => {
+  if (!googleDriveState.url) {
+    alert('Please enter a Google Drive URL')
+    return
+  }
+
+  try {
+    isFetchingFiles.value = true
+
+    // Simulate API call to fetch Google Drive files
+    await new Promise(resolve => setTimeout(resolve, 1500))
+
+    // Mock files data
+    googleDriveFiles.value = [
+      {
+        id: '1',
+        name: 'Company Policy 2024.pdf',
+        type: 'PDF',
+        size: '2.4 MB'
+      },
+      {
+        id: '2',
+        name: 'Employee Guidelines.docx',
+        type: 'Word',
+        size: '1.2 MB'
+      },
+      {
+        id: '3',
+        name: 'Budget Report.csv',
+        type: 'CSV',
+        size: '890 kB'
+      }
+    ]
+
+  } catch (error) {
+    console.error('Failed to fetch files:', error)
+    alert('Failed to fetch files from Google Drive. Please check the URL and try again.')
+  } finally {
+    isFetchingFiles.value = false
+  }
+}
+
+const uploadFromGoogleDrive = async () => {
+  if (!googleDriveState.category) {
+    alert('Please select a category')
+    return
+  }
+
+  if (googleDriveFiles.value.length === 0) {
+    alert('No files available to upload')
+    return
+  }
+
+  try {
+    isUploadingFromGoogleDrive.value = true
+
+    // Simulate upload process for each file
+    for (const file of googleDriveFiles.value) {
+      const newId = Math.max(...artefacts.value.map(a => a.id)) + 1
+      const newArt = {
+        id: newId,
+        name: file.name,
+        description: `Uploaded from Google Drive`,
+        category: googleDriveState.category,
+        type: file.type,
+        size: file.size,
+        status: 'processing' as const,
+        uploadedBy: 'Current User',
+        lastUpdated: formatDateTime(new Date()),
+        artefact: file.name,
+      }
+
+      artefacts.value.unshift(newArt)
+
+      // Mark as processed after a delay
+      setTimeout(() => {
+        const uploadedArtefact = artefacts.value.find(a => a.id === newId)
+        if (uploadedArtefact) {
+          uploadedArtefact.status = 'processed'
+        }
+      }, 2000)
+    }
+
+    // Reset Google Drive state
+    googleDriveState.category = ''
+    googleDriveState.url = ''
+    googleDriveFiles.value = []
+
+    // Close modal
+    showUploadModal.value = false
+
+    console.log('Files uploaded from Google Drive')
+
+  } catch (error) {
+    console.error('Upload from Google Drive failed:', error)
+    alert('Upload failed. Please try again.')
+  } finally {
+    isUploadingFromGoogleDrive.value = false
+  }
+}
+
+// Category management methods
+const addCategory = (category: string) => {
+  const trimmedCategory = category.trim()
+  if (trimmedCategory && !availableCategories.value.includes(trimmedCategory)) {
+    availableCategories.value.push(trimmedCategory)
+    // Auto-select the newly added category
+    state.category = trimmedCategory
+    googleDriveState.category = trimmedCategory
+  }
+}
+
+const deleteCategory = (category: string) => {
+  const index = availableCategories.value.indexOf(category)
+  if (index > -1) {
+    availableCategories.value.splice(index, 1)
+
+    // Clear the selected category if it was deleted
+    if (state.category === category) {
+      state.category = ''
+    }
+    if (googleDriveState.category === category) {
+      googleDriveState.category = ''
+    }
+
+    // Update any existing artefacts that use this category
+    artefacts.value.forEach(artefact => {
+      if (artefact.category === category) {
+        artefact.category = 'Uncategorized'
+      }
+    })
+  }
+}
+
+// Reset all form fields
+const resetAllFields = () => {
+  // Reset file upload form
+  state.file = null
+  state.category = ''
+  state.description = ''
+
+  // Reset Google Drive form
+  googleDriveState.category = ''
+  googleDriveState.url = ''
+  googleDriveFiles.value = []
+
+  // Reset file input
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+
+  // Reset loading states
+  isFetchingFiles.value = false
+  isUploadingFromGoogleDrive.value = false
+}
+
+// Watch for tab changes and reset fields
+watch(uploadType, () => {
+  resetAllFields()
+})
+
+// Reset modal state when opening
+watch(showUploadModal, (newVal) => {
+  if (newVal) {
+    uploadType.value = 0  // 0 = file upload tab
+  }
+})
 
 useHead({
   title: 'Artefact Management - Admin Dashboard',
