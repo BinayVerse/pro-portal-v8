@@ -23,3 +23,14 @@ export interface GoogleDriveFetchResult {
   files: ArtefactGoogleDriveFile[]
   message: string
 }
+
+export interface DocumentCategory {
+  id: string
+  name: string
+  org_id: string
+  added_by?: number
+  added_by_name?: string
+  document_count?: number
+  created_at?: string
+  updated_at?: string
+}

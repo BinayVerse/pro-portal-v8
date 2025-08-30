@@ -49,12 +49,26 @@
       @close="showSummaryModal = false"
       @download="downloadArtefact"
     />
+
+    <!-- Confirm Delete Category Popup -->
+    <ConfirmPopup
+      v-model:is-open="showConfirmPopup"
+      title="Delete Category"
+      :message="`Are you sure you want to delete the category '${categoryToDelete}'?`"
+      details="This action cannot be undone. All artefacts in this category will be moved to 'Uncategorized'."
+      confirm-text="Delete Category"
+      cancel-text="Cancel"
+      type="danger"
+      :loading="isDeletingCategory"
+      @confirm="confirmDeleteCategory"
+      @cancel="cancelDeleteCategory"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { formatDateTime } from '~/utils'
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, nextTick } from 'vue'
 import { useNotification } from '~/composables/useNotification'
 
 // Using admin layout
@@ -70,10 +84,11 @@ import ArtefactsFilters from '~/components/admin/artefacts/ArtefactsFilters.vue'
 import ArtefactsTable from '~/components/admin/artefacts/ArtefactsTable.vue'
 import ArtefactUploadModal from '~/components/admin/artefacts/ArtefactUploadModal.vue'
 import ArtefactSummaryModal from '~/components/admin/artefacts/ArtefactSummaryModal.vue'
+import ConfirmPopup from '~/components/ui/ConfirmPopup.vue'
 
 // Import stores
 import { useAuthStore } from '~/stores/auth'
-import { useOrganizationStore } from '~/stores/organization'
+import { useArtefactsStore } from '~/stores/artefacts'
 
 // Reactive data
 const searchQuery = ref('')
@@ -84,9 +99,14 @@ const showUploadModal = ref(false)
 const showSummaryModal = ref(false)
 const selectedArtefact = ref(null)
 
+// Confirm popup state
+const showConfirmPopup = ref(false)
+const categoryToDelete = ref('')
+const isDeletingCategory = ref(false)
+
 // Initialize stores
 const authStore = useAuthStore()
-const organizationStore = useOrganizationStore()
+const artefactsStore = useArtefactsStore()
 
 // Get orgId from auth user
 const currentUser = computed(() => authStore.user)
@@ -107,11 +127,17 @@ const fallbackCategories = [
 
 // Categories management - now from store with fallback
 const availableCategories = computed(() => {
-  const storeCategories = organizationStore.getDocumentCategoryNames
-  return storeCategories.length > 0 ? storeCategories : fallbackCategories
+  const storeCategories = artefactsStore.getCategoryNames
+  const categories = storeCategories.length > 0 ? storeCategories : fallbackCategories
+  console.log('Available categories computed:', categories.length, 'from store:', storeCategories.length)
+  return categories
 })
-const categoriesLoading = computed(() => organizationStore.isDocCatLoading)
-const categoriesError = computed(() => organizationStore.getDocCatError)
+const categoriesLoading = computed(() => {
+  const loading = artefactsStore.isCategoryLoadingState
+  console.log('Categories loading state:', loading)
+  return loading
+})
+const categoriesError = computed(() => artefactsStore.getCategoryError)
 
 // Sample artefacts data
 const artefacts = ref([
@@ -249,7 +275,7 @@ const addCategory = async (category: string) => {
   if (orgId.value) {
     // Use API if orgId is available
     try {
-      await organizationStore.createDocumentCategory(trimmedCategory, orgId.value)
+      await artefactsStore.createCategory(trimmedCategory, orgId.value)
     } catch (error) {
       console.error('Failed to add category:', error)
       // Show error message to user
@@ -264,14 +290,24 @@ const addCategory = async (category: string) => {
   }
 }
 
-const deleteCategory = async (category: string) => {
-  if (orgId.value) {
-    // Use API if orgId is available
-    try {
+const deleteCategory = (category: string) => {
+  categoryToDelete.value = category
+  showConfirmPopup.value = true
+}
+
+const confirmDeleteCategory = async () => {
+  const category = categoryToDelete.value
+  if (!category) return
+
+  isDeletingCategory.value = true
+
+  try {
+    if (orgId.value) {
+      // Use API if orgId is available
       // Find the category ID from the store
-      const categoryToDelete = organizationStore.docCats.find(cat => cat.name === category)
-      if (categoryToDelete) {
-        await organizationStore.deleteDocumentCategory(categoryToDelete.id, orgId.value)
+      const categoryData = artefactsStore.categories.find(cat => cat.name === category)
+      if (categoryData) {
+        await artefactsStore.deleteCategory(categoryData.id, orgId.value)
 
         // Update any existing artefacts that use this category
         artefacts.value.forEach(artefact => {
@@ -279,52 +315,135 @@ const deleteCategory = async (category: string) => {
             artefact.category = 'Uncategorized'
           }
         })
-      }
-    } catch (error) {
-      console.error('Failed to delete category:', error)
-      // Show error message to user
-      const { showError } = useNotification()
-      showError('Failed to delete category. Please try again.')
-    }
-  } else {
-    // Fallback to local management if no orgId
-    console.warn('No organization ID available, category changes will not be persisted')
-    const { showWarning } = useNotification()
-    showWarning('Category deleted locally only. Changes will not be saved.')
 
-    // Update any existing artefacts that use this category (local only)
-    artefacts.value.forEach(artefact => {
-      if (artefact.category === category) {
-        artefact.category = 'Uncategorized'
+        const { showSuccess } = useNotification()
+        showSuccess(`Category "${category}" deleted successfully`)
       }
-    })
+    } else {
+      // Fallback to local management if no orgId
+      console.warn('No organization ID available, category changes will not be persisted')
+      const { showWarning } = useNotification()
+      showWarning('Category deleted locally only. Changes will not be saved.')
+
+      // Update any existing artefacts that use this category (local only)
+      artefacts.value.forEach(artefact => {
+        if (artefact.category === category) {
+          artefact.category = 'Uncategorized'
+        }
+      })
+    }
+  } catch (error) {
+    console.error('Failed to delete category:', error)
+    const { showError } = useNotification()
+    showError('Failed to delete category. Please try again.')
+  } finally {
+    isDeletingCategory.value = false
+    showConfirmPopup.value = false
+    categoryToDelete.value = ''
   }
+}
+
+const cancelDeleteCategory = (event?: Event) => {
+  if (event) {
+    event.stopPropagation()
+    event.preventDefault()
+  }
+  showConfirmPopup.value = false
+  categoryToDelete.value = ''
+  isDeletingCategory.value = false
 }
 
 // Initialize categories when orgId is available
 const initializeCategories = async () => {
-  if (orgId.value) {
-    try {
-      await organizationStore.fetchDocumentCategories(orgId.value)
-    } catch (error) {
-      console.error('Failed to fetch document categories:', error)
+  if (!orgId.value) {
+    console.warn('No orgId available for category fetch')
+    return
+  }
+
+  const token = process.client ? localStorage.getItem('authToken') : null
+  if (!token) {
+    console.warn('No auth token available for category fetch')
+    return
+  }
+
+  try {
+    console.log('Fetching categories for org:', orgId.value, 'with token:', token ? 'present' : 'missing')
+    await artefactsStore.fetchCategories(orgId.value)
+    console.log('Categories fetched successfully:', artefactsStore.categories.length)
+  } catch (error: any) {
+    console.error('Failed to fetch document categories:', error)
+
+    // Handle specific error types
+    if (error?.statusCode === 401 || error?.response?.status === 401) {
+      console.error('Authentication error - token may be invalid or expired')
+      const { showError } = useNotification()
+      showError('Session expired. Please log in again.')
+
+      // Clear invalid auth and redirect
+      if (process.client) {
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('authUser')
+      }
+      await navigateTo('/login')
+    } else {
+      const { showError } = useNotification()
+      showError('Failed to load categories. Please refresh the page.')
     }
+  }
+}
+
+// Initialize page data
+const initializePage = async () => {
+  try {
+    // Ensure auth is initialized first
+    await authStore.initializeStore()
+
+    // Wait a bit for auth to settle
+    await nextTick()
+
+    // Check if user is authenticated and has orgId
+    if (authStore.isLoggedIn && orgId.value) {
+      console.log('User authenticated with orgId:', orgId.value)
+      // Ensure token is available before fetching categories
+      const token = process.client ? localStorage.getItem('authToken') : null
+      if (token) {
+        await initializeCategories()
+      } else {
+        console.warn('No auth token available')
+      }
+    } else {
+      console.warn('User not authenticated or no orgId available')
+    }
+  } catch (error) {
+    console.error('Failed to initialize page:', error)
   }
 }
 
 // Watch for orgId changes and fetch categories
 watch(orgId, (newOrgId) => {
-  if (newOrgId) {
-    initializeCategories()
+  if (newOrgId && authStore.isLoggedIn) {
+    console.log('OrgId changed, fetching categories:', newOrgId)
+    const token = process.client ? localStorage.getItem('authToken') : null
+    if (token) {
+      initializeCategories()
+    }
   }
-}, { immediate: true })
+}, { immediate: false })
 
-// Initialize auth store on mount
-onMounted(() => {
-  authStore.initializeStore()
-  if (orgId.value) {
-    initializeCategories()
+// Watch for authentication changes
+watch(() => authStore.isLoggedIn, (isAuth) => {
+  if (isAuth && orgId.value) {
+    console.log('Authentication status changed, fetching categories')
+    const token = process.client ? localStorage.getItem('authToken') : null
+    if (token) {
+      initializeCategories()
+    }
   }
+})
+
+// Initialize everything on mount
+onMounted(async () => {
+  await initializePage()
 })
 
 useHead({
